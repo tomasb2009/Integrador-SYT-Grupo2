@@ -95,8 +95,8 @@ admin@grupo2:~$
 
 ### Evidencia
 
-![Instalación de Raspberry Pi OS](imagenes/instalacion.png)
-![Primer arranque](imagenes/primer-arranque.png)
+![Instalación de Raspberry Pi OS](imagenes/actividad_1/instalacion.png)
+![Primer arranque](imagenes/actividad_1/primer-arranque.png)
 
 ---
 
@@ -123,7 +123,7 @@ Esta dirección IP es la que se utilizará más adelante para conectarse por SSH
 
 ### Evidencia
 
-![Dirección IP obtenida](imagenes/ip.png)
+![Dirección IP obtenida](imagenes/actividad_1/ip.png)
 
 ---
 
@@ -172,7 +172,7 @@ Resultado obtenido:
 
 ### Evidencia
 
-![Estado del servicio SSH](imagenes/status-ssh.png)
+![Estado del servicio SSH](imagenes/actividad_1/status-ssh.png)
 
 ---
 
@@ -195,7 +195,7 @@ Al ejecutar el comando se solicitó la contraseña del usuario; una vez autentic
 
 ### Evidencia
 
-![Conexión SSH exitosa](imagenes/conexion-ssh.png)
+![Conexión SSH exitosa](imagenes/actividad_1/conexion-ssh.png)
 
 ---
 

@@ -10,12 +10,16 @@
   - [4. Materiales utilizados](#4-materiales-utilizados)
   - [5. Instalación de Xorg](#5-instalación-de-xorg)
     - [Evidencia](#evidencia)
+  - [](#)
+  - [](#-1)
   - [6. Configuración de SSH para X11 Forwarding](#6-configuración-de-ssh-para-x11-forwarding)
     - [Evidencia](#evidencia-1)
   - [7. Conexión remota con reenvío de X11](#7-conexión-remota-con-reenvío-de-x11)
     - [Evidencia](#evidencia-2)
   - [8. Ejecución de aplicaciones gráficas de prueba](#8-ejecución-de-aplicaciones-gráficas-de-prueba)
     - [Evidencia](#evidencia-3)
+  - [](#-2)
+  - [](#-3)
   - [9. Conclusión](#9-conclusión)
 
 ---
@@ -112,11 +116,11 @@ Xorg -version
 ```
 
 ### Evidencia
-![Actualizacion de los Paquetes](imagenes/actualizacion-sistema.png) 
+![Actualizacion de los Paquetes](imagenes/actividad_2/actualizacion-sistema.png) 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------
-![Instalación de Xorg](imagenes/instalacion-xorg.png)
+![Instalación de Xorg](imagenes/actividad_2/instalacion-xorg.png)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------
-![Versión de Xorg](imagenes/xorg-version.png)
+![Versión de Xorg](imagenes/actividad_2/xorg-version.png)
 
 
 ---
@@ -146,7 +150,7 @@ x11uselocalhost yes
 
 ### Evidencia
 
-![Configuración de X11 en SSH](imagenes/sshd-x11.png)
+![Configuración de X11 en SSH](imagenes/actividad_2/sshd-x11.png)
 
 ---
 
@@ -172,7 +176,7 @@ echo $DISPLAY
 
 ### Evidencia
 
-![Conexión con ssh -X y DISPLAY](imagenes/ssh-x-display.png)
+![Conexión con ssh -X y DISPLAY](imagenes/actividad_2/ssh-x-display.png)
 
 ---
 
@@ -204,11 +208,11 @@ quadrapassel &
 
 ### Evidencia
 
-![xeyes y xclock en el cliente](imagenes/xeyes.png)
+![xeyes y xclock en el cliente](imagenes/actividad_2/xeyes.png)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------
-![xeyes y xclock en el cliente](imagenes/xclock.png)
+![xeyes y xclock en el cliente](imagenes/actividad_2/xclock.png)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------
-![xeyes y xclock en el cliente](imagenes/quadrapassel.png)
+![xeyes y xclock en el cliente](imagenes/actividad_2/quadrapassel.png)
 
 ---
 ## 9. Conclusión
