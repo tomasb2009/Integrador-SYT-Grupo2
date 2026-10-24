@@ -380,8 +380,6 @@ sudo systemctl status isc-dhcp-server
 
 ### Evidencia
 
-> **[ INSERTAR CAPTURA: `systemctl status isc-dhcp-server` con el servicio activo ]**
-
 ![Estado del servicio DHCP](imagenes/actividad_3/status-dhcp.jpeg)
 
 ---
