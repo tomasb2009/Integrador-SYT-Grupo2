@@ -6,7 +6,7 @@ Repositorio de trabajos y actividades del trabajo práctico de Raspberry PI
 
 - Andrada Ezequiel
 - Barragán Tomás
-- Gonzales Bossi Joaquín
+- Gonzalez Bossi Joaquín
 - Malap Lucciano
 
 ## 📂 Actividades y archivos
