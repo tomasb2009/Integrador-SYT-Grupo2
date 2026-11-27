@@ -17,5 +17,6 @@ Repositorio de trabajos y actividades del trabajo práctico de Raspberry PI
 | Actividad 2 | Raspberry Pi y XORG | [Ver Raspberry Pi y XORG](Actividad_2_Raspberry_Pi_XORG.md) |
 | Actividad 3 | Raspberry Pi y DHCP | [Ver Raspberry Pi y DHCP](Actividad_3_Raspberry_Pi_DHCP.md) |
 | Actividad 4 | Raspberry Pi y FTP | [Ver Raspberry Pi y FTP](Actividad_4_Raspberry_Pi_FTP.md) |
+| Actividad 5 | Raspberry Pi y DNS | [Ver Raspberry Pi y DNS](Actividad_5_Raspberry_Pi_DNS.md) |
 
 ---
