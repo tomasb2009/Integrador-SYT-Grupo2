@@ -11,84 +11,100 @@
     - [3.2 Bluetooth y el perfil PAN](#32-bluetooth-y-el-perfil-pan)
     - [3.3 Anclaje de red (tethering)](#33-anclaje-de-red-tethering)
     - [3.4 Enrutamiento e IP forwarding](#34-enrutamiento-e-ip-forwarding)
-    - [3.5 NAT y _masquerade_](#35-nat-y-masquerade)
+    - [3.5 NAT y masquerade](#35-nat-y-masquerade)
     - [3.6 nftables](#36-nftables)
     - [3.7 DHCP y DNS en un router](#37-dhcp-y-dns-en-un-router)
+    - [3.8 Recorrido de un paquete](#38-recorrido-de-un-paquete)
   - [4. Topología utilizada](#4-topología-utilizada)
-  - [5. Requisitos previos](#5-requisitos-previos)
-  - [6. Desarrollo práctico](#6-desarrollo-práctico)
-    - [6.1 Verificar el estado inicial (DHCP y eth0)](#61-verificar-el-estado-inicial-dhcp-y-eth0)
-    - [6.2 Instalar los paquetes necesarios](#62-instalar-los-paquetes-necesarios)
-    - [6.3 Activar el anclaje Bluetooth en el celular Android](#63-activar-el-anclaje-bluetooth-en-el-celular-android)
-    - [6.4 Emparejar la Raspberry Pi con el celular](#64-emparejar-la-raspberry-pi-con-el-celular)
-    - [6.5 Crear la conexión Bluetooth PAN](#65-crear-la-conexión-bluetooth-pan)
-    - [6.6 Verificar que la Raspberry Pi tiene Internet](#66-verificar-que-la-raspberry-pi-tiene-internet)
-    - [6.7 Habilitar el reenvío de paquetes (IP forwarding)](#67-habilitar-el-reenvío-de-paquetes-ip-forwarding)
-    - [6.8 Configurar NAT con nftables](#68-configurar-nat-con-nftables)
-    - [6.9 Verificar el servidor DHCP (gateway y DNS)](#69-verificar-el-servidor-dhcp-gateway-y-dns)
-    - [6.10 Pruebas de funcionamiento](#610-pruebas-de-funcionamiento)
+  - [5. Desarrollo práctico](#5-desarrollo-práctico)
+    - [5.1 Verificar el estado inicial](#51-verificar-el-estado-inicial)
+    - [5.2 Emparejar la Raspberry Pi con el celular](#52-emparejar-la-raspberry-pi-con-el-celular)
+    - [5.3 Establecer la conexión Bluetooth PAN](#53-establecer-la-conexión-bluetooth-pan)
+    - [5.4 Verificar que la Raspberry Pi tiene Internet](#54-verificar-que-la-raspberry-pi-tiene-internet)
+    - [5.5 Habilitar el reenvío de paquetes](#55-habilitar-el-reenvío-de-paquetes)
+    - [5.6 Configurar NAT con nftables](#56-configurar-nat-con-nftables)
+    - [5.7 Verificar el servidor DHCP](#57-verificar-el-servidor-dhcp)
+    - [5.8 Pruebas de funcionamiento](#58-pruebas-de-funcionamiento)
+  - [6. Problemas encontrados y soluciones](#6-problemas-encontrados-y-soluciones)
   - [7. Conclusión](#7-conclusión)
-
 
 ---
 
 ## 1. Introducción
 
-Un router hogareño cumple, en esencia, tres funciones: **obtiene acceso a Internet** por una interfaz (la _WAN_), **reparte direcciones IP** a los dispositivos de la red local (_DHCP_) y **reenvía el tráfico** de la red local hacia Internet traduciendo las direcciones (_NAT_).
+Un router hogareño cumple tres funciones: **obtiene Internet** por una interfaz (la _WAN_), **reparte direcciones IP** a la red local (_DHCP_) y **reenvía el tráfico** de la red local hacia Internet traduciendo las direcciones (_NAT_).
 
-En este trabajo la Raspberry Pi cumple ese rol, pero con una particularidad: su "WAN" no es un cable ni un WiFi, sino una conexión **Bluetooth** con un celular Android que comparte su acceso a Internet. La Raspberry Pi luego redirige ese tráfico hacia la interfaz **eth0**, que está conectada a un switch donde se encuentran los demás equipos de la red.
-
-Se mantiene activa la configuración del servidor DHCP realizada en la entrega anterior.
+En este trabajo la Raspberry Pi cumple ese rol con una particularidad: su "WAN" es una conexión **Bluetooth** con un celular Android que comparte su Internet. La Raspberry redirige ese tráfico hacia **eth0**, conectada al switch del grupo. Se mantiene activa la configuración del servidor DHCP de la entrega anterior.
 
 ## 2. Objetivo del informe
 
-- Conectar la Raspberry Pi a Internet a través de Bluetooth usando el celular Android como _punto de acceso_ (anclaje Bluetooth).
-- Habilitar el reenvío de paquetes y NAT para que los equipos conectados a `eth0` salgan a Internet a través de la Raspberry Pi.
-- Verificar que los clientes de la red local obtienen dirección, puerta de enlace y DNS del servidor DHCP, y que pueden navegar.
+- Conectar la Raspberry Pi a Internet por Bluetooth usando el anclaje del celular Android.
+- Habilitar reenvío de paquetes y NAT para que los equipos conectados a `eth0` salgan a Internet a través de la Raspberry.
+- Verificar que los clientes reciben dirección, gateway y DNS del servidor DHCP y pueden navegar.
 
-> **Alcance:** en esta etapa **no** se crea una red WiFi propia en la Raspberry Pi. Solo se trabaja con Bluetooth (entrada) y Ethernet (salida hacia la red local).
+> **Alcance:** en esta etapa no se crea una red WiFi propia en la Raspberry. Solo se usa Bluetooth (entrada) y Ethernet (salida hacia la red local).
 
 ## 3. Desarrollo teórico
 
 ### 3.1 Raspberry Pi
 
-Es una computadora de placa única (SBC) de bajo costo que corre Linux (Raspberry Pi OS, basado en Debian). Incluye interfaz Ethernet, WiFi y Bluetooth, lo que la hace apta para funcionar como router casero.
+Computadora de placa única (SBC) de bajo costo que corre Linux (Raspberry Pi OS, basado en Debian). Incluye Ethernet, WiFi y Bluetooth, lo que la hace apta para funcionar como router.
 
 ### 3.2 Bluetooth y el perfil PAN
 
-**Bluetooth** es una tecnología inalámbrica de corto alcance (aprox. 10 m) en la banda de 2,4 GHz. Se organiza en _perfiles_, que definen para qué se usa la conexión. El perfil que nos interesa es **PAN (Personal Area Networking)**, que permite transportar tráfico IP sobre Bluetooth, como si fuera una red Ethernet.
+**Bluetooth** es una tecnología inalámbrica de corto alcance (aprox. 10 m) en la banda de 2,4 GHz. Se organiza en **perfiles**, que definen para qué se usa cada conexión. El perfil que nos interesa es **PAN (Personal Area Networking)**, que transporta **tráfico IP** sobre Bluetooth como si fuera una red Ethernet.
 
-En PAN hay dos roles:
+PAN define dos roles:
 
 | Rol | Descripción | Quién lo cumple |
 |-----|-------------|-----------------|
-| **NAP** (_Network Access Point_) | Ofrece acceso a una red/Internet a los demás | El **celular Android** |
+| **NAP** (_Network Access Point_) | Ofrece acceso a una red o a Internet a los demás | El **celular Android** |
 | **PANU** (_PAN User_) | Cliente que consume ese acceso | La **Raspberry Pi** |
 
-Cuando la conexión se establece, Linux crea una interfaz de red virtual llamada **`bnep0`** (Bluetooth Network Encapsulation Protocol). A partir de ahí `bnep0` se comporta como cualquier otra interfaz: recibe una IP por DHCP (del celular), tiene una ruta por defecto, etc.
+**Emparejamiento (_pairing_) y confianza (_trust_):** antes de usar un perfil, ambos dispositivos deben vincularse e intercambiar claves. `trust` permite que se reconecten sin pedir confirmación.
+
+Al establecerse la conexión, Linux crea la interfaz virtual **`bnep0`** (_Bluetooth Network Encapsulation Protocol_), que encapsula paquetes IP dentro de Bluetooth. Desde ese momento `bnep0` se comporta como cualquier interfaz de red: recibe una IP por DHCP del celular y tiene una ruta por defecto.
+
+**BlueZ** es la pila Bluetooth oficial de Linux. Expone sus funciones por **D-Bus** (un bus de mensajes entre programas del sistema), y es lo que usamos para pedir la conexión PAN.
 
 ### 3.3 Anclaje de red (tethering)
 
-Es la función del celular de compartir su conexión a Internet (datos móviles o WiFi) con otros dispositivos, ya sea por WiFi, USB o Bluetooth. En Android el anclaje Bluetooth entrega direcciones en la red `192.168.44.0/24` en la mayoría de los dispositivos (puede variar según marca y versión).
+Función del celular que comparte su conexión a Internet (datos móviles o WiFi) con otros dispositivos por WiFi, USB o Bluetooth. Con el anclaje Bluetooth activo, el celular ofrece el servicio NAP y actúa como servidor DHCP de ese enlace: en nuestro caso entregó la red `10.73.154.0/24`, con el celular como gateway (`10.73.154.19`). La red puede variar según el celular y la operadora.
 
 ### 3.4 Enrutamiento e IP forwarding
 
-Por defecto, un equipo Linux **descarta** los paquetes que le llegan por una interfaz y que no están dirigidos a él. Para que actúe como router, hay que activar el **reenvío de paquetes** (`net.ipv4.ip_forward = 1`), de modo que pueda pasar tráfico de `eth0` hacia `bnep0` y viceversa.
+Un equipo Linux **descarta** por defecto los paquetes que le llegan y no están dirigidos a él. Para que actúe como router hay que activar el **reenvío de paquetes** (`net.ipv4.ip_forward = 1`), que le permite pasar tráfico de `eth0` hacia `bnep0` y viceversa.
 
-### 3.5 NAT y _masquerade_
+La **tabla de rutas** indica por qué interfaz sale cada destino. La **ruta por defecto** (`default`) es la que se usa cuando no hay una más específica y debe ser **única**: en nuestro caso apunta a `bnep0`, y `eth0` no debe tener gateway.
 
-Las IP de la red local (por ejemplo `192.168.2.0/24`) son **privadas** y no se enrutan en Internet. El **NAT** (_Network Address Translation_) reemplaza la IP de origen de los paquetes salientes por la IP de la interfaz de salida (`bnep0`), y deshace la traducción en las respuestas. La variante **masquerade** hace esto usando automáticamente la IP actual de la interfaz, ideal cuando la IP es dinámica, como en este caso (la asigna el celular).
+### 3.5 NAT y masquerade
+
+Las IP de nuestra LAN (`192.168.2.0/24`) son **privadas** y no se enrutan en Internet. El **NAT** (_Network Address Translation_) reemplaza la IP de origen de los paquetes salientes por la de la interfaz de salida (`bnep0`) y deshace la traducción en las respuestas. Para saber a quién devolver cada respuesta, el kernel mantiene una tabla de conexiones (_connection tracking_).
+
+**Masquerade** es la variante de NAT que usa automáticamente la IP actual de la interfaz de salida. Es la adecuada acá, porque la IP de `bnep0` la asigna el celular y puede cambiar.
 
 ### 3.6 nftables
 
-Es el framework de filtrado de paquetes del kernel Linux que reemplaza a `iptables`. Organiza las reglas en _tablas_ → _cadenas_ → _reglas_. Es el que viene por defecto en las versiones recientes de Raspberry Pi OS.
+Framework de filtrado de paquetes del kernel Linux, sucesor de `iptables` y el que usa por defecto Raspberry Pi OS. Organiza las reglas así:
+
+- **Tabla:** agrupa cadenas de una misma familia (`ip` = IPv4) y propósito.
+- **Cadena:** lista de reglas enganchada (_hook_) en un punto del recorrido del paquete: `postrouting` (justo antes de salir) o `forward` (tráfico que atraviesa el equipo).
+- **Regla:** condición y acción (`accept`, `drop`, `masquerade`).
 
 ### 3.7 DHCP y DNS en un router
 
-- **DHCP:** reparte IP a los clientes e informa _qué puerta de enlace_ (gateway) y _qué servidores DNS_ usar.
-- **DNS:** traduce nombres de dominio (`google.com`) a direcciones IP. Si el DNS está mal configurado, hay conectividad pero "no navega".
+- **DHCP:** reparte IP e informa la puerta de enlace y los DNS. Nuestro servidor (`isc-dhcp-server`) entrega a los clientes `192.168.2.1` como gateway y `8.8.8.8`, `1.1.1.1` como DNS.
+- **DNS:** traduce nombres de dominio a direcciones IP. Si falla, hay conectividad pero "no navega".
 
-Para que el esquema funcione, el DHCP debe indicar a los clientes que su **gateway es la IP de eth0 de la Raspberry Pi**.
+### 3.8 Recorrido de un paquete
+
+Cuando una notebook de la LAN hace `ping 8.8.8.8`:
+
+1. La notebook envía el paquete a su gateway, la Raspberry (`192.168.2.1`), por el switch.
+2. La Raspberry lo recibe por `eth0` y, como el reenvío está activo y la regla `forward` lo permite, lo pasa hacia `bnep0`.
+3. En `postrouting`, el **masquerade** cambia la IP de origen `192.168.2.x` por la de `bnep0` y registra la conexión.
+4. El paquete viaja por Bluetooth al celular, que lo reenvía a Internet (haciendo su propio NAT).
+5. La respuesta vuelve por el mismo camino: la Raspberry consulta su tabla de conexiones, restaura la IP de destino original y la envía por `eth0` a la notebook.
 
 ## 4. Topología utilizada
 
@@ -98,7 +114,7 @@ Para que el esquema funcione, el DHCP debe indicar a los clientes que su **gatew
 ┌─────┴──────┐   Bluetooth (PAN)
 │  Celular   │◄──────────────────┐
 │  Android   │      (NAP)        │
-│ 192.168.44.1                   │ bnep0 (PANU)
+│ gateway: 10.73.154.19          │ bnep0 (PANU)
 └────────────┘            ┌──────┴────────────┐
                           │   Raspberry Pi    │
                           │  - Cliente BT PAN │
@@ -113,76 +129,43 @@ Para que el esquema funcione, el DHCP debe indicar a los clientes que su **gatew
                           PC cliente  WAP (acceso WiFi)
 ```
 
-## 5. Requisitos previos
+![Conexión física de la red](imagenes/actividad_5/topologia.png)
 
-- Raspberry Pi con Raspberry Pi OS y acceso por SSH o teclado/monitor.
-- `eth0` con IP estática y servidor DHCP funcionando (entrega anterior).
-- Celular Android con datos móviles o WiFi con Internet.
-- Un equipo cliente conectado al switch para las pruebas.
+## 5. Desarrollo práctico
 
-## 6. Desarrollo práctico
+### 5.1 Verificar el estado inicial
 
-### 6.1 Verificar el estado inicial (DHCP y eth0)
-
-Antes de tocar nada confirmamos que lo que ya funcionaba sigue en pie.
+Se confirma que lo configurado en la entrega anterior sigue funcionando.
 
 ```bash
 ip -br address show eth0
-```
-
-- `ip`: herramienta moderna para administrar la red en Linux.
-- `-br`: modo _brief_, muestra una salida resumida en una línea por interfaz.
-- `address show eth0`: muestra las direcciones IP de la interfaz `eth0`.
-
-Debe verse la IP estática del grupo (ejemplo `192.168.2.1/24`).
-
-```bash
 systemctl status isc-dhcp-server
 ```
 
-- `systemctl`: controla servicios en sistemas que usan _systemd_.
-- `status`: muestra si el servicio está activo y sus últimos mensajes.
-- `isc-dhcp-server`: nombre del servicio DHCP configurado en la entrega anterior.
+- `ip -br address show eth0`: muestra de forma resumida (`-br`) la IP de `eth0`. Debe ser `192.168.2.1/24`.
+- `systemctl status isc-dhcp-server`: muestra si el servidor DHCP está activo (`active (running)`).
 
-### 6.2 Instalar los paquetes necesarios
+Si hace falta instalar paquetes, se hace antes de seguir (requiere Internet temporal, por ejemplo con el hotspot del celular, porque la red del switch no tiene salida):
 
 ```bash
 sudo apt update
 sudo apt install -y bluez nftables
-```
-
-- `sudo`: ejecuta el comando con privilegios de administrador.
-- `apt update`: actualiza la lista de paquetes disponibles en los repositorios.
-- `apt install -y`: instala paquetes; `-y` responde "sí" automáticamente a las confirmaciones.
-- `bluez`: pila Bluetooth oficial de Linux (incluye el servicio `bluetooth` y la herramienta `bluetoothctl`).
-- `nftables`: framework de reglas de firewall/NAT.
-
-Activamos el servicio Bluetooth:
-
-```bash
 sudo systemctl enable --now bluetooth
 ```
 
-- `enable`: hace que el servicio arranque automáticamente al iniciar el sistema.
-- `--now`: además lo inicia en este momento.
-- `bluetooth`: servicio que administra el adaptador Bluetooth.
+- `apt update`: actualiza la lista de paquetes disponibles.
+- `apt install -y bluez nftables`: instala la pila Bluetooth (`bluez`, que incluye `bluetoothctl`) y el firewall `nftables`; `-y` acepta las confirmaciones.
+- `systemctl enable --now bluetooth`: inicia el servicio Bluetooth ahora (`--now`) y en cada arranque (`enable`).
 
-### 6.3 Activar el anclaje Bluetooth en el celular Android
+### 5.2 Emparejar la Raspberry Pi con el celular
 
-1. Activar **Bluetooth** en el celular.
-2. Ir a **Ajustes → Conexiones (o Red e Internet) → Zona WiFi y anclaje de red** (el nombre varía según la marca).
-3. Activar **Anclaje Bluetooth** (_Bluetooth tethering_).
-4. Dejar la pantalla de Bluetooth del celular abierta y visible durante el emparejamiento.
-
-### 6.4 Emparejar la Raspberry Pi con el celular
+En el celular, abrir **Ajustes → Bluetooth** y dejar la pantalla visible. Luego en la Raspberry:
 
 ```bash
 bluetoothctl
 ```
 
-- `bluetoothctl`: consola interactiva para administrar dispositivos Bluetooth. A partir de acá los comandos se escriben dentro de esa consola.
-
-Dentro de `bluetoothctl`:
+- `bluetoothctl`: consola interactiva para administrar Bluetooth. Los siguientes comandos se escriben dentro de ella.
 
 ```text
 power on
@@ -191,11 +174,9 @@ default-agent
 scan on
 ```
 
-- `power on`: enciende el adaptador Bluetooth de la Raspberry.
-- `agent on` / `default-agent`: registra el agente que gestiona la confirmación de códigos de emparejamiento.
-- `scan on`: busca dispositivos cercanos. Aparecerá el celular con su dirección MAC (formato `AA:BB:CC:DD:EE:FF`).
-
-Cuando aparezca el celular (anotar su MAC), detener la búsqueda y emparejar:
+- `power on`: enciende el adaptador Bluetooth.
+- `agent on` / `default-agent`: registra el agente que gestiona la confirmación del código de emparejamiento.
+- `scan on`: busca dispositivos cercanos. Aparece el celular con su MAC (formato `AA:BB:CC:DD:EE:FF`).
 
 ```text
 scan off
@@ -205,111 +186,83 @@ exit
 ```
 
 - `scan off`: detiene la búsqueda.
-- `pair <MAC>`: inicia el emparejamiento. Hay que **aceptar el código en el celular**.
-- `trust <MAC>`: marca al dispositivo como confiable, para que se pueda reconectar automáticamente sin pedir confirmación.
+- `pair <MAC>`: inicia el emparejamiento. Hay que aceptar el código en el celular (y escribir `yes` en la Raspberry si lo pide).
+- `trust <MAC>`: marca al celular como confiable.
 - `exit`: sale de `bluetoothctl`.
 
-### 6.5 Crear la conexión Bluetooth PAN
-
-La Raspberry actúa como **PANU** y se conecta al **NAP** del celular.
+Luego, en el celular, se activa **Ajustes → Zona WiFi y anclaje → Anclaje Bluetooth**. Se verifica con:
 
 ```bash
-sudo nmcli connection add type bluetooth con-name bt-android \
-  autoconnect yes bluetooth.bdaddr AA:BB:CC:DD:EE:FF bluetooth.type panu
+bluetoothctl info AA:BB:CC:DD:EE:FF | grep -E 'Paired|Trusted|NAP'
 ```
 
-- `nmcli`: cliente de línea de comandos de NetworkManager.
-- `connection add`: crea un nuevo perfil de conexión.
-- `type bluetooth`: indica que el perfil es de tipo Bluetooth.
-- `con-name bt-android`: nombre que le damos al perfil.
-- `autoconnect yes`: intenta reconectarse solo cuando el celular esté disponible.
-- `bluetooth.bdaddr`: dirección MAC del celular (reemplazar por la real).
-- `bluetooth.type panu`: la Raspberry se conecta como cliente PAN (_PANU_).
+- `bluetoothctl info <MAC>`: muestra los datos del dispositivo.
+- `grep -E 'Paired|Trusted|NAP'`: filtra solo esas líneas. Deben aparecer `Paired: yes`, `Trusted: yes` y `UUID: NAP`, que indica que el celular ofrece el servicio de punto de acceso.
 
-Activar la conexión:
+![Emparejamiento exitoso](imagenes/actividad_5/pairing.png)
+
+### 5.3 Establecer la conexión Bluetooth PAN
+
+Se le pide a BlueZ que conecte directamente al servicio **NAP** del celular. Para armar el comando, la MAC se escribe con `_` en lugar de `:`.
 
 ```bash
-sudo nmcli connection up bt-android
+sudo busctl call org.bluez /org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF org.bluez.Network1 Connect s "nap"
 ```
 
-- `connection up`: activa el perfil. Si todo sale bien, el celular le entrega una IP por DHCP a la Raspberry.
+- `busctl call`: invoca un método de un servicio a través de D-Bus.
+- `org.bluez`: el servicio de BlueZ.
+- `/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF`: ruta del objeto que representa al celular dentro de BlueZ.
+- `org.bluez.Network1 Connect s "nap"`: llama al método `Connect` de la interfaz de red PAN, con el texto (`s`) `"nap"`. Si sale bien, devuelve el nombre de la interfaz creada (`bnep0`).
 
-Luego se le pide IP al celular con NetworkManager.
+Después se le pide una IP al celular con NetworkManager:
 
 ```bash
 sudo nmcli device set bnep0 managed yes
 sudo nmcli device connect bnep0
 ```
 
-- `device set bnep0 managed yes`: indica a NetworkManager que administre la interfaz `bnep0`.
-- `device connect bnep0`: crea un perfil automático con DHCP y solicita una dirección al celular.
+- `nmcli`: cliente de línea de comandos de NetworkManager.
+- `device set bnep0 managed yes`: le indica a NetworkManager que administre `bnep0`.
+- `device connect bnep0`: crea un perfil automático con DHCP y solicita la dirección al celular.
 
-Para cortar el enlace: `sudo busctl call org.bluez /org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF org.bluez.Network1 Disconnect`.
+> Esta conexión no se restablece sola después de un reinicio: hay que repetir este paso con el celular desbloqueado y el anclaje activo.
 
-### 6.6 Verificar que la Raspberry Pi tiene Internet
+### 5.4 Verificar que la Raspberry Pi tiene Internet
 
 ```bash
 ip -br address show bnep0
-```
-
-- Muestra la IP asignada a `bnep0` (típicamente `192.168.44.x/24`).
-
-```bash
 ip route
-```
-
-- `ip route`: muestra la tabla de rutas. Debe aparecer una línea `default via 192.168.44.1 dev bnep0`, es decir, la salida a Internet es el celular.
-
-Para estar seguros de que el acceso sale por Bluetooth y no por otra interfaz, apagamos el WiFi de la Raspberry durante las pruebas:
-
-```bash
-sudo nmcli radio wifi off
-```
-
-- `radio wifi off`: apaga la radio WiFi de la Raspberry. **Ojo:** si se está trabajando por SSH a través del WiFi, se corta la sesión; en ese caso entrar por `eth0` desde la notebook con IP fija temporal (`192.168.2.10/24`) con `ssh admin@192.168.2.1`.
-
-```bash
 ping -c 4 8.8.8.8
 ping -c 4 google.com
 ```
 
-- `ping`: envía paquetes ICMP para comprobar conectividad.
-- `-c 4`: envía solo 4 paquetes.
-- `8.8.8.8`: DNS público de Google; prueba la conectividad **sin** depender de la resolución de nombres.
-- `google.com`: prueba conectividad **y** resolución DNS.
+- `ip -br address show bnep0`: muestra la IP que dio el celular (en nuestro caso `10.73.154.x/24`).
+- `ip route`: muestra la tabla de rutas. Debe haber una línea `default via <IP del celular> dev bnep0` y ninguna ruta `default` por `eth0`.
+- `ping -c 4 8.8.8.8`: envía 4 paquetes ICMP (`-c 4`) a un DNS público para probar conectividad **sin** depender de nombres.
+- `ping -c 4 google.com`: prueba conectividad **y** resolución DNS.
 
-### 6.7 Habilitar el reenvío de paquetes (IP forwarding)
+![Ping exitoso desde la Raspberry](imagenes/actividad_5/ping-raspi.png)
+
+### 5.5 Habilitar el reenvío de paquetes
 
 ```bash
 echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-ip-forward.conf
 sudo sysctl --system
-```
-
-- `echo "..."`: imprime el texto indicado.
-- `|` (pipe): envía esa salida como entrada del siguiente comando.
-- `sudo tee <archivo>`: escribe la entrada en el archivo con privilegios de administrador (se usa `tee` porque una redirección `>` con `sudo` no elevaría los permisos de escritura).
-- `/etc/sysctl.d/99-ip-forward.conf`: archivo de configuración del kernel que se aplica en cada arranque, por lo que el cambio es **permanente**.
-- `sysctl --system`: recarga todos los archivos de configuración del kernel, aplicando el cambio ahora.
-
-Verificación:
-
-```bash
 cat /proc/sys/net/ipv4/ip_forward
 ```
 
-- `cat`: muestra el contenido de un archivo. Debe devolver `1`.
+- `echo "..." | sudo tee <archivo>`: escribe la línea en el archivo con permisos de administrador (se usa `tee` porque una redirección `>` con `sudo` no elevaría los permisos de escritura).
+- `/etc/sysctl.d/99-ip-forward.conf`: configuración del kernel que se aplica en cada arranque, por lo que el cambio es **permanente**.
+- `sysctl --system`: recarga la configuración del kernel y la aplica ahora.
+- `cat /proc/sys/net/ipv4/ip_forward`: debe devolver `1`.
 
-### 6.8 Configurar NAT con nftables
-
-Editamos el archivo de configuración de nftables:
+### 5.6 Configurar NAT con nftables
 
 ```bash
 sudo nano /etc/nftables.conf
 ```
 
-- `nano`: editor de texto simple de terminal.
-
-Contenido del archivo:
+- `nano`: editor de texto de terminal. Se reemplaza el contenido del archivo por:
 
 ```nft
 #!/usr/sbin/nft -f
@@ -332,19 +285,13 @@ table ip filter {
 }
 ```
 
-Explicación línea por línea:
-
-- `flush ruleset`: borra todas las reglas previas, para partir de una configuración limpia.
-- `table ip nat`: tabla para IPv4 dedicada a traducción de direcciones.
-- `chain postrouting`: cadena que procesa los paquetes **justo antes de salir** del equipo.
-- `type nat hook postrouting priority srcnat; policy accept;`: cadena de tipo NAT enganchada en _postrouting_, que acepta por defecto.
-- `oifname "bnep0" masquerade`: a todo paquete que sale por `bnep0` se le cambia la IP de origen por la IP de `bnep0` (la del celular).
-- `table ip filter` / `chain forward`: cadena que procesa el tráfico **que atraviesa** la Raspberry (no el destinado a ella).
-- `policy drop`: por defecto se descarta el tráfico reenviado (política restrictiva).
-- `ct state established,related accept`: permite las **respuestas** a conexiones ya iniciadas desde la red local.
-- `iifname "eth0" oifname "bnep0" accept`: permite iniciar conexiones desde `eth0` hacia `bnep0` (red local → Internet).
-
-Aplicar y hacer permanente:
+- `flush ruleset`: borra todas las reglas previas para partir de cero.
+- `table ip nat` / `chain postrouting`: tabla y cadena de NAT que procesan los paquetes justo antes de salir.
+- `oifname "bnep0" masquerade`: a todo paquete que sale por `bnep0` se le cambia la IP de origen por la de esa interfaz.
+- `table ip filter` / `chain forward`: tabla y cadena que procesan el tráfico que **atraviesa** la Raspberry.
+- `policy drop`: por defecto se descarta lo reenviado (política restrictiva).
+- `ct state established,related accept`: permite las **respuestas** a conexiones ya iniciadas desde la LAN.
+- `iifname "eth0" oifname "bnep0" accept`: permite iniciar conexiones desde `eth0` hacia `bnep0` (LAN → Internet).
 
 ```bash
 sudo nft -f /etc/nftables.conf
@@ -353,12 +300,14 @@ sudo nft list ruleset
 ```
 
 - `nft -f <archivo>`: carga las reglas desde el archivo.
-- `systemctl enable --now nftables`: el servicio carga `/etc/nftables.conf` en cada arranque.
-- `nft list ruleset`: muestra las reglas activas, para comprobar que se cargaron.
+- `systemctl enable --now nftables`: aplica las reglas ahora y en cada arranque.
+- `nft list ruleset`: muestra las reglas activas para comprobar que se cargaron.
 
-### 6.9 Verificar el servidor DHCP (gateway y DNS)
+![Reglas de nftables cargadas](imagenes/actividad_5/nft-ruleset.png)
 
-La configuración del servidor DHCP de la entrega anterior **ya entrega todo lo necesario**, por lo que no hace falta modificarla. Las líneas relevantes de `/etc/dhcp/dhcpd.conf` son:
+### 5.7 Verificar el servidor DHCP
+
+La configuración del servidor DHCP de la entrega anterior **ya entrega lo necesario**, por lo que no se modifica. Las líneas relevantes de `/etc/dhcp/dhcpd.conf` son:
 
 ```text
 option domain-name-servers 8.8.8.8, 1.1.1.1;
@@ -366,34 +315,41 @@ option domain-name-servers 8.8.8.8, 1.1.1.1;
 subnet 192.168.2.0 netmask 255.255.255.0 {
     range 192.168.2.100 192.168.2.200;
     option routers 192.168.2.1;
-    option broadcast-address 192.168.2.255;
 }
 ```
 
-- `option routers 192.168.2.1;`: los clientes reciben como puerta de enlace la IP de `eth0` de la Raspberry Pi. Hasta ahora esa puerta de enlace no llevaba a ningún lado; a partir de este trabajo la Raspberry realmente reenvía el tráfico hacia Internet.
-- `option domain-name-servers 8.8.8.8, 1.1.1.1;`: DNS públicos de Google y Cloudflare. Los clientes consultan directamente a esos servidores, y las consultas viajan por el NAT de la Raspberry, por lo que los nombres externos se resuelven correctamente.
+- `option routers 192.168.2.1;`: los clientes reciben como gateway la IP de `eth0` de la Raspberry. Antes ese gateway no llevaba a ningún lado; ahora la Raspberry realmente reenvía el tráfico a Internet.
+- `option domain-name-servers 8.8.8.8, 1.1.1.1;`: DNS públicos que los clientes consultan a través del NAT de la Raspberry.
 
-### 6.10 Pruebas de funcionamiento
+### 5.8 Pruebas de funcionamiento
 
-**Desde un equipo cliente conectado al switch:**
+Desde una notebook Windows conectada al switch (con el WiFi apagado, para asegurar que sale por el cable):
 
-Renovar la dirección y revisar lo recibido.
-
-En Windows (CMD): `ipconfig /release`, `ipconfig /renew` y `ipconfig /all`.
-
-Pruebas de conectividad:
-
-```bash
-ping -c 4 192.168.2.1
-ping -c 4 8.8.8.8
-ping -c 4 google.com
-traceroute 8.8.8.8
+```powershell
+ipconfig /renew
+ipconfig /all
+ping -n 3 192.168.2.1
+ping -n 3 8.8.8.8
+ping -n 3 google.com
 ```
 
-- `traceroute`: lista los routers por los que pasa el paquete. El primer salto debe ser la Raspberry y el segundo el celular (`192.168.44.1`).
+- `ipconfig /renew`: pide una nueva configuración al servidor DHCP.
+- `ipconfig /all`: muestra la configuración recibida. Debe verse IP `192.168.2.100–200`, gateway y servidor DHCP `192.168.2.1`, y DNS `8.8.8.8` y `1.1.1.1`.
+- `ping -n 3 <destino>`: envía 3 paquetes (en Windows el número se indica con `-n`). El primero prueba el gateway (la Raspberry), el segundo la salida a Internet y el tercero la resolución DNS.
+
+![Prueba exitosa desde un cliente](imagenes/actividad_5/ping-cliente.png)
+
+## 6. Problemas encontrados y soluciones
+
+| Problema | Causa | Solución |
+|---|---|---|
+| `Failed to pair: AlreadyExists` y luego timeout al conectar | Emparejamiento viejo guardado de un solo lado | `bluetoothctl remove <MAC>`, "Olvidar" el dispositivo en el celular y volver a emparejar |
+| Dos perfiles de NetworkManager con el mismo nombre | Perfiles duplicados de pruebas anteriores | Borrarlos con `nmcli connection delete uuid <uuid>` y empezar de cero |
+| `bt-network` termina con `Segmentation fault` | Herramienta abandonada, incompatible con BlueZ actual | Se usó `busctl` para pedir la conexión directamente a BlueZ |
+| Los clientes recibían _Host de destino inaccesible_ aunque la Raspberry navegaba | El enlace Bluetooth quedó colgado: `bnep0` tenía IP pero el celular no respondía (`ip neigh` mostraba `INCOMPLETE`) | Reconectar con el celular desbloqueado y el anclaje activo |
 
 ## 7. Conclusión
 
-Se logró que la Raspberry Pi obtenga acceso a Internet a través de Bluetooth, comportándose como cliente PANU de un celular Android que actúa como NAP, y se la configuró como router: se habilitó el reenvío de paquetes, se aplicó NAT (masquerade) sobre `bnep0` con reglas nftables persistentes y se ajustó el servidor DHCP para que los clientes de `eth0` reciban la Raspberry como gateway y DNS válidos.
+Se logró que la Raspberry Pi obtenga acceso a Internet por Bluetooth, comportándose como cliente PANU de un celular Android que actúa como NAP, y se la configuró como router: se habilitó el reenvío de paquetes y se aplicó NAT (masquerade) sobre `bnep0` con reglas nftables persistentes. El servidor DHCP de la entrega anterior se mantuvo sin cambios, ya que entrega a los clientes la Raspberry como gateway y DNS válidos.
 
-Entre las lecciones aprendidas: la interfaz `bnep0` es dinámica, por lo que conviene usar _masquerade_; la ruta por defecto debe ser única (no debe haber gateway en `eth0`); y la falta de navegación suele deberse al DNS o al forwarding, no al enlace. El rendimiento está limitado por el ancho de banda de Bluetooth, mucho menor que el de un enlace Ethernet o WiFi.
+Entre las lecciones aprendidas: `bnep0` es una interfaz dinámica, por lo que conviene usar _masquerade_; la ruta por defecto debe ser única (sin gateway en `eth0`); y un enlace Bluetooth puede quedar colgado con la interfaz todavía activa, por lo que conviene verificar la conectividad real de la Raspberry antes de buscar fallas en el NAT. La conexión Bluetooth debe restablecerse manualmente tras un reinicio, y el ancho de banda está limitado por Bluetooth, mucho menor que Ethernet o WiFi.
