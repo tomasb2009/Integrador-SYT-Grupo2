@@ -25,8 +25,7 @@
     - [5.6 Configurar NAT con nftables](#56-configurar-nat-con-nftables)
     - [5.7 Verificar el servidor DHCP](#57-verificar-el-servidor-dhcp)
     - [5.8 Pruebas de funcionamiento](#58-pruebas-de-funcionamiento)
-  - [6. Problemas encontrados y soluciones](#6-problemas-encontrados-y-soluciones)
-  - [7. Conclusión](#7-conclusión)
+  - [6. Conclusión](#6-conclusión)
 
 ---
 
@@ -129,8 +128,6 @@ Cuando una notebook de la LAN hace `ping 8.8.8.8`:
                           PC cliente  WAP (acceso WiFi)
 ```
 
-![Conexión física de la red](imagenes/actividad_5/topologia.png)
-
 ## 5. Desarrollo práctico
 
 ### 5.1 Verificar el estado inicial
@@ -199,8 +196,6 @@ bluetoothctl info AA:BB:CC:DD:EE:FF | grep -E 'Paired|Trusted|NAP'
 - `bluetoothctl info <MAC>`: muestra los datos del dispositivo.
 - `grep -E 'Paired|Trusted|NAP'`: filtra solo esas líneas. Deben aparecer `Paired: yes`, `Trusted: yes` y `UUID: NAP`, que indica que el celular ofrece el servicio de punto de acceso.
 
-![Emparejamiento exitoso](imagenes/actividad_5/pairing.png)
-
 ### 5.3 Establecer la conexión Bluetooth PAN
 
 Se le pide a BlueZ que conecte directamente al servicio **NAP** del celular. Para armar el comando, la MAC se escribe con `_` en lugar de `:`.
@@ -240,8 +235,6 @@ ping -c 4 google.com
 - `ip route`: muestra la tabla de rutas. Debe haber una línea `default via <IP del celular> dev bnep0` y ninguna ruta `default` por `eth0`.
 - `ping -c 4 8.8.8.8`: envía 4 paquetes ICMP (`-c 4`) a un DNS público para probar conectividad **sin** depender de nombres.
 - `ping -c 4 google.com`: prueba conectividad **y** resolución DNS.
-
-![Ping exitoso desde la Raspberry](imagenes/actividad_5/ping-raspi.png)
 
 ### 5.5 Habilitar el reenvío de paquetes
 
@@ -303,8 +296,6 @@ sudo nft list ruleset
 - `systemctl enable --now nftables`: aplica las reglas ahora y en cada arranque.
 - `nft list ruleset`: muestra las reglas activas para comprobar que se cargaron.
 
-![Reglas de nftables cargadas](imagenes/actividad_5/nft-ruleset.png)
-
 ### 5.7 Verificar el servidor DHCP
 
 La configuración del servidor DHCP de la entrega anterior **ya entrega lo necesario**, por lo que no se modifica. Las líneas relevantes de `/etc/dhcp/dhcpd.conf` son:
@@ -337,18 +328,7 @@ ping -n 3 google.com
 - `ipconfig /all`: muestra la configuración recibida. Debe verse IP `192.168.2.100–200`, gateway y servidor DHCP `192.168.2.1`, y DNS `8.8.8.8` y `1.1.1.1`.
 - `ping -n 3 <destino>`: envía 3 paquetes (en Windows el número se indica con `-n`). El primero prueba el gateway (la Raspberry), el segundo la salida a Internet y el tercero la resolución DNS.
 
-![Prueba exitosa desde un cliente](imagenes/actividad_5/ping-cliente.png)
-
-## 6. Problemas encontrados y soluciones
-
-| Problema | Causa | Solución |
-|---|---|---|
-| `Failed to pair: AlreadyExists` y luego timeout al conectar | Emparejamiento viejo guardado de un solo lado | `bluetoothctl remove <MAC>`, "Olvidar" el dispositivo en el celular y volver a emparejar |
-| Dos perfiles de NetworkManager con el mismo nombre | Perfiles duplicados de pruebas anteriores | Borrarlos con `nmcli connection delete uuid <uuid>` y empezar de cero |
-| `bt-network` termina con `Segmentation fault` | Herramienta abandonada, incompatible con BlueZ actual | Se usó `busctl` para pedir la conexión directamente a BlueZ |
-| Los clientes recibían _Host de destino inaccesible_ aunque la Raspberry navegaba | El enlace Bluetooth quedó colgado: `bnep0` tenía IP pero el celular no respondía (`ip neigh` mostraba `INCOMPLETE`) | Reconectar con el celular desbloqueado y el anclaje activo |
-
-## 7. Conclusión
+## 6. Conclusión
 
 Se logró que la Raspberry Pi obtenga acceso a Internet por Bluetooth, comportándose como cliente PANU de un celular Android que actúa como NAP, y se la configuró como router: se habilitó el reenvío de paquetes y se aplicó NAT (masquerade) sobre `bnep0` con reglas nftables persistentes. El servidor DHCP de la entrega anterior se mantuvo sin cambios, ya que entrega a los clientes la Raspberry como gateway y DNS válidos.
 
